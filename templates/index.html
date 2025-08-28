@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered NPC Chat System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: #4a5568;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+        }
+        
+        .btn-success:hover {
+            background: #38a169;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+        }
+        
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #276749;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+        }
+        
+        .alert-info {
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            color: #2c5282;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #4a5568;
+            font-weight: 500;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .results-table th {
+            background: #f7fafc;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .results-table tr:hover {
+            background: #f7fafc;
+        }
+        
+        .mood-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .mood-friendly {
+            background: #c6f6d5;
+            color: #276749;
+        }
+        
+        .mood-angry {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        
+        .mood-neutral {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .tab-container {
+            margin-top: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .tab {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #4a5568;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 AI-Powered NPC Chat System</h1>
+            <p>Process player messages and generate intelligent NPC responses</p>
+        </div>
+
+        <!-- Alerts -->
+        <div id="alert-success" class="alert alert-success"></div>
+        <div id="alert-error" class="alert alert-error"></div>
+        <div id="alert-info" class="alert alert-info"></div>
+
+        <!-- Configuration Card -->
+        <div class="card">
+            <div class="card-header">🔧 AI Provider Configuration</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="provider-select">Select AI Provider:</label>
+                    <select id="provider-select" class="form-control">
+                        <option value="local">Local LLM (Ollama/Similar)</option>
+                        <option value="openai">OpenAI API</option>
+                    </select>
+                </div>
+
+                <!-- OpenAI Configuration -->
+                <div id="openai-config" style="display: none;">
+                    <div class="form-group">
+                        <label for="openai-key">OpenAI API Key:</label>
+                        <input type="password" id="openai-key" class="form-control" placeholder="sk-...">
+                    </div>
+                    <div class="form-group">
+                        <label for="openai-model">Model:</label>
+                        <select id="openai-model" class="form-control">
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            <option value="gpt-4">GPT-4</option>
+                            <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Local LLM Configuration -->
+                <div id="local-config">
+                    <div class="form-group">
+                        <label for="local-url">API URL:</label>
+                        <input type="text" id="local-url" class="form-control" value="http://localhost:11434">
+                    </div>
+                    <div class="form-group">
+                        <label for="local-model">Model Name:</label>
+                        <input type="text" id="local-model" class="form-control" value="llama2" placeholder="e.g., llama2, mistral">
+                    </div>
+                </div>
+
+                <button id="configure-btn" class="btn">Configure AI Provider</button>
+                <span id="config-status" style="margin-left: 10px; font-weight: bold;"></span>
+            </div>
+        </div>
+
+        <!-- Processing Card -->
+        <div class="card">
+            <div class="card-header">🚀 Message Processing</div>
+            <div class="card-body">
+                <p>Process the 100 player messages from <code>players.json</code> and generate NPC responses.</p>
+                
+                <div class="loading" id="processing-loading">
+                    <div class="spinner"></div>
+                    <p>Processing messages... This may take a few minutes.</p>
+                </div>
+
+                <div class="progress-bar" id="progress-container" style="display: none;">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div id="progress-text" style="display: none; text-align: center; margin-top: 10px;"></div>
+
+                <div id="processing-controls">
+                    <button id="process-btn" class="btn btn-success" disabled>
+                        📝 Process All Messages
+                    </button>
+                    <button id="export-btn" class="btn" style="display: none;">
+                        💾 Export Results
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Tabs -->
+        <div class="tab-container" id="results-container" style="display: none;">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('stats')">📊 Statistics</button>
+                <button class="tab" onclick="showTab('results')">💬 Recent Results</button>
+            </div>
+
+            <!-- Statistics Tab -->
+            <div id="stats-tab" class="tab-content active">
+                <div class="stats-grid" id="stats-grid">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+
+            <!-- Results Tab -->
+            <div id="results-tab" class="tab-content">
+                <div style="max-height: 600px; overflow-y: auto;">
+                    <table class="results-table" id="results-table">
+                        <thead>
+                            <tr>
+                                <th>Player ID</th>
+                                <th>Message</th>
+                                <th>NPC Reply</th>
+                                <th>Mood</th>
+                                <th>Processing Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-tbody">
+                            <!-- Results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let configuredProvider = null;
+
+        // Provider selection handling
+        document.getElementById('provider-select').addEventListener('change', function() {
+            const provider = this.value;
+            document.getElementById('openai-config').style.display = provider === 'openai' ? 'block' : 'none';
+            document.getElementById('local-config').style.display = provider === 'local' ? 'block' : 'none';
+            updateConfigStatus();
+        });
+
+        // Configure AI Provider
+        document.getElementById('configure-btn').addEventListener('click', async function() {
+            const provider = document.getElementById('provider-select').value;
+            const configData = { provider_type: provider };
+
+            if (provider === 'openai') {
+                configData.api_key = document.getElementById('openai-key').value;
+                configData.model = document.getElementById('openai-model').value;
+                
+                if (!configData.api_key) {
+                    showAlert('error', 'Please enter your OpenAI API key');
+                    return;
+                }
+            } else {
+                configData.base_url = document.getElementById('local-url').value;
+                configData.model = document.getElementById('local-model').value;
+            }
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(configData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    configuredProvider = provider;
+                    updateConfigStatus();
+                    showAlert('success', `${provider === 'openai' ? 'OpenAI' : 'Local LLM'} configured successfully!`);
+                    document.getElementById('process-btn').disabled = false;
+                } else {
+                    showAlert('error', result.error || 'Configuration failed');
+                }
+            } catch (error) {
+                showAlert('error', 'Network error: ' + error.message);
+            }
+        });
+
+        // Process Messages
+        document.getElementById('process-btn').addEventListener('click', async function() {
+            if (!configuredProvider) {
+                showAlert('error', 'Please configure an AI provider first');
+                return;
+            }
+
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            
+            document.getElementById('processing-loading').style.display = 'block';
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('progress-text').style.display = 'block';
+
+            try {
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('success', `Successfully processed ${result.messages_processed} messages!`);
+                    document.getElementById('export-btn').style.display = 'inline-block';
+                    loadResults();
+                    loadStats();
+                    document.getElementById('results-container').style.display = 'block';
+                } else {
+                    showAlert('error', result.error || 'Processing failed');
+                }
+            } catch (error) {
+                showAlert('error', 'Network error: ' + error.message);
+            } finally {
+                document.getElementById('processing-loading').style.display = 'none';
+                btn.disabled = false;
+                btn.textContent = '📝 Process All Messages';
+            }
+        });
+
+        // Load Results
+        async function loadResults() {
+            try {
+                const response = await fetch('/api/results');
+                const results = await response.json();
+                
+                const tbody = document.getElementById('results-tbody');
+                tbody.innerHTML = '';
+                
+                results.forEach(result => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${result.player_id}</td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${result.player_message}</td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${result.npc_reply}</td>
+                        <td><span class="mood-badge mood-${result.mood}">${result.mood}</span></td>
+                        <td>${result.processing_time.toFixed(3)}s</td>
+                    `;
+                });
+            } catch (error) {
+                console.error('Failed to load results:', error);
+            }
+        }
+
+        // Load Statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                const statsGrid = document.getElementById('stats-grid');
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.total_messages}</div>
+                        <div class="stat-label">Total Messages</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.unique_players}</div>
+                        <div class="stat-label">Unique Players</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.avg_processing_time}s</div>
+                        <div class="stat-label">Avg Processing Time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.mood_distribution.friendly || 0}</div>
+                        <div class="stat-label">Friendly Responses</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.mood_distribution.angry || 0}</div>
+                        <div class="stat-label">Angry Responses</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.mood_distribution.neutral || 0}</div>
+                        <div class="stat-label">Neutral Responses</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Tab functionality
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Utility functions
+        function showAlert(type, message) {
+            const alertId = `alert-${type}`;
+            const alert = document.getElementById(alertId);
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            // Hide other alerts
+            ['success', 'error', 'info'].forEach(t => {
+                if (t !== type) {
+                    document.getElementById(`alert-${t}`).style.display = 'none';
+                }
+            });
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        function updateConfigStatus() {
+            const statusSpan = document.getElementById('config-status');
+            if (configuredProvider) {
+                statusSpan.textContent = `✅ ${configuredProvider === 'openai' ? 'OpenAI' : 'Local LLM'} Ready`;
+                statusSpan.style.color = '#48bb78';
+            } else {
+                statusSpan.textContent = '❌ Not Configured';
+                statusSpan.style.color = '#f56565';
+            }
+        }
+
+        // Initialize
+        updateConfigStatus();
+    </script>
+</body>
+</html>
