@@ -503,6 +503,8 @@
                 return;
             }
 
+            console.log('Processing messages...');
+
             const btn = this;
             btn.disabled = true;
             btn.textContent = 'Processing...';
@@ -511,13 +513,49 @@
             document.getElementById('progress-container').style.display = 'block';
             document.getElementById('progress-text').style.display = 'block';
 
+            console.log('progress bar shown');
+
             try {
-                const response = await fetch('/api/process', {
+                // Set up progress tracking before starting the process
+                const progressFill = document.getElementById('progress-fill');
+                const progressText = document.getElementById('progress-text');
+                let progressInterval;
+                
+                // Start progress polling
+                progressInterval = setInterval(async () => {
+                    try{
+                        const progressResponse = await fetch('/api/progress');
+                        const progress = await progressResponse.json();
+
+                        console.log('progress', progress);
+
+                        if (progress.total > 0) {
+                            const percentage = Math.round((progress.current / progress.total) * 100);
+                            progressFill.style.width = `${percentage}%`;
+                            progressText.textContent = `Processing ${progress.current} of ${progress.total} messages...`;
+
+                            if (progress.completed) {
+                                clearInterval(progressInterval);
+                            }
+                        }
+                    } catch (error){
+                        console.log('Error fetching progress', error);
+                    }
+                }, 1000);
+                
+                // Start the processing request (non-blocking)
+                const processPromise = fetch('/api/process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
-
+                
+                // Wait for processing to complete
+                const response = await processPromise;
+                console.log('response', response);
+                
                 const result = await response.json();
+
+                clearInterval(progressInterval);
                 
                 if (response.ok) {
                     showAlert('success', `Successfully processed ${result.messages_processed} messages!`);
@@ -530,6 +568,7 @@
                     showAlert('error', result.error || 'Processing failed');
                 }
             } catch (error) {
+                clearInterval(progressInterval);
                 showAlert('error', 'Network error: ' + error.message);
             } finally {
                 document.getElementById('processing-loading').style.display = 'none';

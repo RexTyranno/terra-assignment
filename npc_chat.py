@@ -347,17 +347,25 @@ class NPCChatProcessor:
     
     def process_all_messages(self, messages: List[PlayerMessage]) -> List[NPCResponse]:
         """Process all messages and return responses."""
+        global processing_progress
+
         logger.info(f"Processing {len(messages)} messages...")
         results_logger.info(f"PROCESSING SESSION STARTED: {datetime.now().isoformat()}")
         results_logger.info(f"Total Messages to Process: {len(messages)}")
         results_logger.info("=" * 80)
         results_logger.info("")
+
+        processing_progress["total"] = len(messages)
+        processing_progress["current"] = 0
+        processing_progress["completed"] = False
         
         responses = []
         for i, message in enumerate(messages, 1):
             try:
                 response = self.process_message(message)
                 responses.append(response)
+
+                processing_progress["current"] = i
                 
                 # Progress logging
                 if i % 10 == 0:
@@ -368,6 +376,7 @@ class NPCChatProcessor:
             except Exception as e:
                 logger.error(f"Error processing message {i}: {e}")
                 continue
+        processing_progress["completed"] = True
         
         logger.info(f"Completed processing {len(responses)} messages")
         results_logger.info("=" * 80)
@@ -394,11 +403,18 @@ class NPCChatProcessor:
 # Flask application
 app = Flask(__name__)
 processor = None
+processing_progress = {"current":0, "total":0, "completed": False}
 
 @app.route('/')
 def index():
     """Main page with processing controls and results."""
     return render_template('index.html')
+
+@app.route('/api/progress')
+def get_progress():
+    """Get current processing progress."""
+    global processing_progress
+    return jsonify(processing_progress)
 
 @app.route('/api/config', methods=['GET', 'POST'])
 def config():
