@@ -1,2 +1,4 @@
 .venv
 .env
+npc_chat.log
+npc_responses.json

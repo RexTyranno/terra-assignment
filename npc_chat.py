@@ -7,7 +7,7 @@ from dataclasses import dataclass, asdict
 from collections import defaultdict, deque
 
 import requests
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_file
 
 # Configure logging
 logging.basicConfig(
@@ -19,6 +19,15 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Configure structured results logger
+results_logger = logging.getLogger('npc_results')
+results_logger.setLevel(logging.INFO)
+results_handler = logging.FileHandler('npc_results.log', mode='w')
+results_formatter = logging.Formatter('%(message)s')
+results_handler.setFormatter(results_formatter)
+results_logger.addHandler(results_handler)
+results_logger.propagate = False
 
 @dataclass
 class PlayerMessage:
@@ -244,6 +253,24 @@ class NPCChatProcessor:
         self.ai_provider = ai_provider
         self.conversation_state = ConversationState()
         self.processed_responses: List[NPCResponse] = []
+        self._initialize_results_log()
+    
+    def _initialize_results_log(self):
+        """Initialize the structured results log with headers."""
+        results_logger.info("=" * 80)
+        results_logger.info("STRUCTURED RESULTS LOG")
+        results_logger.info("=" * 80)
+        results_logger.info("")
+        results_logger.info("Format per entry:")
+        results_logger.info("Player ID: [id]")
+        results_logger.info("Message Text: [player message]")
+        results_logger.info("NPC Reply: [npc response]")
+        results_logger.info("State Used: [last 3 messages]")
+        results_logger.info("NPC Mood: [mood]")
+        results_logger.info("Timestamp: [iso timestamp]")
+        results_logger.info("Processing Time: [seconds]")
+        results_logger.info("-" * 80)
+        results_logger.info("")
     
     def load_messages(self, file_path: str) -> List[PlayerMessage]:
         """Load and parse messages from JSON file."""
@@ -292,7 +319,10 @@ class NPCChatProcessor:
         
         self.processed_responses.append(response)
         
-        # Log the interaction
+        # Log structured results as required
+        self._log_structured_response(response)
+        
+        # Log basic interaction to terminal/main log
         logger.info(f"Player {message.player_id} [{mood}]: {message.text}")
         logger.info(f"NPC Reply: {npc_reply}")
         logger.info(f"Processing time: {processing_time:.2f}s")
@@ -300,9 +330,28 @@ class NPCChatProcessor:
         
         return response
     
+    def _log_structured_response(self, response: NPCResponse):
+        """Log a structured response with all required fields."""
+        results_logger.info(f"Player ID: {response.player_id}")
+        results_logger.info(f"Message Text: {response.player_message}")
+        results_logger.info(f"NPC Reply: {response.npc_reply}")
+        
+        state_text = "None" if not response.conversation_state else " | ".join(response.conversation_state)
+        results_logger.info(f"State Used (Last 3 Messages): {state_text}")
+        
+        results_logger.info(f"NPC Mood: {response.mood}")
+        results_logger.info(f"Timestamp: {response.timestamp}")
+        results_logger.info(f"Processing Time: {response.processing_time:.3f}s")
+        results_logger.info("-" * 80)
+        results_logger.info("")
+    
     def process_all_messages(self, messages: List[PlayerMessage]) -> List[NPCResponse]:
         """Process all messages and return responses."""
         logger.info(f"Processing {len(messages)} messages...")
+        results_logger.info(f"PROCESSING SESSION STARTED: {datetime.now().isoformat()}")
+        results_logger.info(f"Total Messages to Process: {len(messages)}")
+        results_logger.info("=" * 80)
+        results_logger.info("")
         
         responses = []
         for i, message in enumerate(messages, 1):
@@ -313,12 +362,19 @@ class NPCChatProcessor:
                 # Progress logging
                 if i % 10 == 0:
                     logger.info(f"Processed {i}/{len(messages)} messages")
+                    results_logger.info(f">>> CHECKPOINT: Processed {i}/{len(messages)} messages <<<")
+                    results_logger.info("")
                     
             except Exception as e:
                 logger.error(f"Error processing message {i}: {e}")
                 continue
         
         logger.info(f"Completed processing {len(responses)} messages")
+        results_logger.info("=" * 80)
+        results_logger.info(f"PROCESSING SESSION COMPLETED: {datetime.now().isoformat()}")
+        results_logger.info(f"Total Messages Processed Successfully: {len(responses)}")
+        results_logger.info("=" * 80)
+        
         return responses
     
     def export_results(self, output_file: str = 'npc_responses.json') -> None:
@@ -330,6 +386,7 @@ class NPCChatProcessor:
                 json.dump(results, f, indent=2, ensure_ascii=False)
             
             logger.info(f"Results exported to {output_file}")
+            results_logger.info(f"JSON results exported to: {output_file}")
             
         except Exception as e:
             logger.error(f"Error exporting results: {e}")
@@ -445,6 +502,46 @@ def get_stats():
         'mood_distribution': mood_distribution
     })
 
+@app.route('/api/export')
+def export_results():
+    """Download the results files."""
+    global processor
+    
+    if not processor or not processor.processed_responses:
+        return jsonify({'error': 'No results to export'}), 400
+    
+    try:
+        # Create a zip file with both JSON and structured log
+        import zipfile
+        import io
+        
+        memory_file = io.BytesIO()
+        
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Add JSON results
+            zf.write('npc_responses.json')
+            
+            # Add structured log if it exists
+            if os.path.exists('npc_results.log'):
+                zf.write('npc_results.log')
+            
+            # Add main log
+            if os.path.exists('npc_chat.log'):
+                zf.write('npc_chat.log')
+        
+        memory_file.seek(0)
+        
+        return send_file(
+            io.BytesIO(memory_file.read()),
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=f'npc_chat_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
+        )
+        
+    except Exception as e:
+        logger.error(f"Export error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 def main():
     """Main entry point for command line usage."""
     import argparse
@@ -498,8 +595,9 @@ def main():
             
             print(f"\nProcessing complete!")
             print(f"- Processed {len(responses)} messages")
-            print(f"- Results saved to npc_responses.json")
-            print(f"- Logs saved to npc_chat.log")
+            print(f"- JSON results saved to npc_responses.json")
+            print(f"- Structured logs saved to npc_results.log")
+            print(f"- Main logs saved to npc_chat.log")
             
         except Exception as e:
             logger.error(f"Error: {e}")
