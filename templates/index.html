@@ -128,6 +128,14 @@
             background: #e53e3e;
         }
         
+        .btn-download {
+            background: #38b2ac;
+        }
+        
+        .btn-download:hover {
+            background: #319795;
+        }
+        
         .alert {
             padding: 15px;
             border-radius: 5px;
@@ -297,6 +305,15 @@
         .tab-content.active {
             display: block;
         }
+        
+        .export-info {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            color: #234e52;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -360,7 +377,7 @@
         <div class="card">
             <div class="card-header">🚀 Message Processing</div>
             <div class="card-body">
-                <p>Process the 100 player messages from <code>players.json</code> and generate NPC responses.</p>
+                <p>Process the 100+ player messages from <code>players.json</code> and generate NPC responses.</p>
                 
                 <div class="loading" id="processing-loading">
                     <div class="spinner"></div>
@@ -376,9 +393,18 @@
                     <button id="process-btn" class="btn btn-success" disabled>
                         📝 Process All Messages
                     </button>
-                    <button id="export-btn" class="btn" style="display: none;">
+                    <button id="export-btn" class="btn btn-download" style="display: none;">
                         💾 Export Results
                     </button>
+                </div>
+                
+                <div id="export-info" class="export-info" style="display: none;">
+                    <strong>📋 Export includes:</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><code>npc_responses.json</code> - Structured JSON data</li>
+                        <li><code>npc_results.log</code> - Formatted results as per requirements</li>
+                        <li><code>npc_chat.log</code> - System processing logs</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -496,6 +522,7 @@
                 if (response.ok) {
                     showAlert('success', `Successfully processed ${result.messages_processed} messages!`);
                     document.getElementById('export-btn').style.display = 'inline-block';
+                    document.getElementById('export-info').style.display = 'block';
                     loadResults();
                     loadStats();
                     document.getElementById('results-container').style.display = 'block';
@@ -508,6 +535,41 @@
                 document.getElementById('processing-loading').style.display = 'none';
                 btn.disabled = false;
                 btn.textContent = '📝 Process All Messages';
+            }
+        });
+
+        // Export Results
+        document.getElementById('export-btn').addEventListener('click', async function() {
+            try {
+                showAlert('info', 'Preparing download...');
+                
+                const response = await fetch('/api/export');
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    showAlert('error', error.error || 'Export failed');
+                    return;
+                }
+                
+                // Create a download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `npc_chat_results_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.zip`;
+                
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showAlert('success', 'Results downloaded successfully!');
+                
+            } catch (error) {
+                showAlert('error', 'Download failed: ' + error.message);
             }
         });
 
